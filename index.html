@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Invincible Earth</title>
+  <meta name="description" content="Invincible Earth is a browser-based strategy game prototype about keeping Earth alive through changing eras.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">World strategy prototype</p>
+        <h1>Invincible Earth</h1>
+        <p class="lede">Guide Earth through 12 eras. Balance climate, resources, population and stability before pressure overwhelms the planet.</p>
+      </div>
+      <div class="planet" aria-hidden="true">
+        <span></span>
+      </div>
+    </section>
+
+    <section class="panel setup" id="setupPanel">
+      <div class="section-heading">
+        <h2>Choose A Starting Region</h2>
+        <p>Each region gives Earth a different opening profile.</p>
+      </div>
+      <div class="region-grid" id="regionGrid"></div>
+    </section>
+
+    <section class="dashboard hidden" id="gamePanel">
+      <aside class="panel status-panel">
+        <div class="section-heading">
+          <h2 id="eraTitle">Era 1</h2>
+          <p id="regionLabel"></p>
+        </div>
+        <div class="meters" id="meters"></div>
+        <button class="secondary" id="resetButton" type="button">New Earth</button>
+      </aside>
+
+      <section class="panel action-panel">
+        <div class="section-heading">
+          <h2>World Council</h2>
+          <p id="turnSummary">Choose your response.</p>
+        </div>
+        <div class="event-card" id="eventCard"></div>
+        <div class="action-grid" id="actionGrid"></div>
+        <div class="log" id="log" aria-live="polite"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
