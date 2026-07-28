@@ -739,6 +739,10 @@ function touchFeedbackText() {
   return state.feedback?.text || "";
 }
 
+function nextRoundLabel() {
+  return state.roundIndex + 1 >= state.targets.length ? "See Results" : "Next Place";
+}
+
 function renderTouchAnswerBar() {
   if (!els.touchAnswerBar) return;
 
@@ -755,6 +759,7 @@ function renderTouchAnswerBar() {
   const pending = state.pendingChoice?.stage === state.stage ? state.pendingChoice : null;
   const feedbackText = touchFeedbackText();
   const isFinalFeedback = state.stage === "reveal" || (state.stage === "flag" && state.flagAnswered);
+  const showRoundAction = isFinalFeedback && !pending;
   const title = pending
     ? "Selected"
     : isFinalFeedback
@@ -772,15 +777,17 @@ function renderTouchAnswerBar() {
     feedbackClass = "is-bad";
   }
 
-  els.touchAnswerBar.className = ["touch-answer-bar", feedbackClass].filter(Boolean).join(" ");
+  els.touchAnswerBar.className = ["touch-answer-bar", feedbackClass, showRoundAction ? "has-round-action" : ""].filter(Boolean).join(" ");
   els.touchAnswerBar.innerHTML = `
     <div class="touch-answer-copy">
       <strong>${escapeHtml(title)}</strong>
       <p>${escapeHtml(message)}</p>
     </div>
     ${pending ? '<button class="touch-submit-button" type="button" data-touch-submit aria-label="Submit selected answer">✓</button>' : ""}
+    ${showRoundAction ? `<button class="primary-action touch-next-button" type="button" data-touch-next>${escapeHtml(nextRoundLabel())}</button>` : ""}
   `;
   els.touchAnswerBar.querySelector("[data-touch-submit]")?.addEventListener("click", submitPendingChoice);
+  els.touchAnswerBar.querySelector("[data-touch-next]")?.addEventListener("click", nextRound);
   els.body.classList.add("has-touch-answer-bar");
 }
 
