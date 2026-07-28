@@ -1185,8 +1185,8 @@ function renderFlagPanel() {
 
 function renderSummaryPanel() {
   const total = state.maxScore;
-  const percent = total ? Math.round((state.score / total) * 100) : 0;
-  const title = percent >= 80 ? "Invincible run" : percent >= 55 ? "Strong explorer" : "New expedition";
+  const percent = total ? (state.score / total) * 100 : 0;
+  const title = resultTitle(percent);
 
   els.choicePanel.innerHTML = `
     <h2>${escapeHtml(title)}</h2>
@@ -1203,6 +1203,14 @@ function renderSummaryPanel() {
   `;
   document.querySelector("#playAgainButton").addEventListener("click", restartToMenu);
   wireSummaryHover();
+}
+
+function resultTitle(percent) {
+  if (percent > 85) return "Invincible Explorer";
+  if (percent >= 70) return "Veteran Explorer";
+  if (percent >= 50) return "Experienced Explorer";
+  if (percent >= 25) return "Young Explorer";
+  return "Rookie";
 }
 
 function wireSummaryHover() {
