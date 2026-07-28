@@ -921,6 +921,15 @@ body[data-theme="satellite"] .country-selected {
   outline: none;
 }
 
+.town-leader-line {
+  stroke: var(--accent-2);
+  stroke-dasharray: 4 4;
+  stroke-linecap: round;
+  stroke-width: 1.6;
+  opacity: 0.68;
+  pointer-events: none;
+}
+
 .town-hit-area {
   fill: transparent;
 }

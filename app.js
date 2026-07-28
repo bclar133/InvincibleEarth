@@ -42,6 +42,8 @@ const CONTINENTS = [
 
 const CONTINENT_BY_KEY = new Map(CONTINENTS.map((continent) => [continent.key, continent]));
 const TOWN_SPOT_LABELS = ["A", "B", "C", "D"];
+const MIN_TOWN_CHOICE_SCREEN_DISTANCE = 62;
+const MIN_TOWN_SPOT_DISPLAY_DISTANCE = 48;
 const EXCLUDED_COUNTRY_ISO3 = new Set(["BHR", "HKG", "SGP"]);
 // Main country answer shapes can exclude far-off overseas fragments while keeping nearby islands.
 const COUNTRY_MAIN_PART_BOUNDS = new Map([
@@ -61,7 +63,10 @@ const SUPPLEMENTAL_TOWN_CHOICES = new Map([
     { name: "Paphos", ascii: "Paphos", lat: 34.772, lng: 32.4297 }
   ]],
   ["DJI", [
-    { name: "Tadjoura", ascii: "Tadjoura", lat: 11.7853, lng: 42.8844 }
+    { name: "Tadjoura", ascii: "Tadjoura", lat: 11.7853, lng: 42.8844 },
+    { name: "Obock", ascii: "Obock", lat: 11.9631, lng: 43.2906 },
+    { name: "Dikhil", ascii: "Dikhil", lat: 11.1044, lng: 42.3739 },
+    { name: "Yoboki", ascii: "Yoboki", lat: 11.5104, lng: 42.1167 }
   ]],
   ["SWZ", [
     { name: "Siteki", ascii: "Siteki", lat: -26.4525, lng: 31.9472 }
@@ -72,7 +77,9 @@ const SUPPLEMENTAL_TOWN_CHOICES = new Map([
     { name: "Fox Bay", ascii: "Fox Bay", lat: -51.95, lng: -60.065 }
   ]],
   ["FJI", [
-    { name: "Lautoka", ascii: "Lautoka", lat: -17.6167, lng: 177.4667 }
+    { name: "Lautoka", ascii: "Lautoka", lat: -17.6167, lng: 177.4667 },
+    { name: "Labasa", ascii: "Labasa", lat: -16.4333, lng: 179.3667 },
+    { name: "Savusavu", ascii: "Savusavu", lat: -16.7787, lng: 179.3336 }
   ]],
   ["GMB", [
     { name: "Bakau", ascii: "Bakau", lat: 13.4781, lng: -16.6819 }
@@ -87,13 +94,18 @@ const SUPPLEMENTAL_TOWN_CHOICES = new Map([
     { name: "Paita", ascii: "Paita", lat: -22.1333, lng: 166.3667 }
   ]],
   ["QAT", [
-    { name: "Al Wakrah", ascii: "Al Wakrah", lat: 25.1715, lng: 51.6034 }
+    { name: "Al Wakrah", ascii: "Al Wakrah", lat: 25.1715, lng: 51.6034 },
+    { name: "Dukhan", ascii: "Dukhan", lat: 25.4297, lng: 50.7858 },
+    { name: "Madinat ash Shamal", ascii: "Madinat ash Shamal", lat: 26.1293, lng: 51.2009 },
+    { name: "Mesaieed", ascii: "Mesaieed", lat: 24.9906, lng: 51.5493 }
   ]],
   ["TLS", [
     { name: "Viqueque", ascii: "Viqueque", lat: -8.8575, lng: 126.3647 }
   ]],
   ["VUT", [
-    { name: "Lakatoro", ascii: "Lakatoro", lat: -16.0999, lng: 167.4164 }
+    { name: "Lakatoro", ascii: "Lakatoro", lat: -16.0999, lng: 167.4164 },
+    { name: "Sola", ascii: "Sola", lat: -13.8761, lng: 167.5517 },
+    { name: "Lenakel", ascii: "Lenakel", lat: -19.5258, lng: 169.2715 }
   ]]
 ]);
 
@@ -1679,8 +1691,8 @@ function drawTownStage() {
   clearMap();
   let bounds = state.activeBounds || getPlayableBounds(state.target.country);
   if (!state.townChoices.length) {
-    state.townChoices = buildTownChoices(bounds);
-    state.activeBounds = boundsForPoints(bounds, state.townChoices, state.target.country);
+    state.townChoices = buildTownChoices();
+    state.activeBounds = townChoiceBounds(state.townChoices, state.target.country);
     bounds = state.activeBounds;
   }
 
@@ -1693,13 +1705,24 @@ function drawTownStage() {
   const spots = state.townChoices
     .map((choice) => ({ ...choice, point: projection([choice.lng, choice.lat]) }))
     .filter((choice) => choice.point);
+  const displaySpots = spreadTownSpots(spots);
+
+  mapLayer().append("g")
+    .selectAll("line")
+    .data(displaySpots.filter((choice) => townSpotOffset(choice) > 6))
+    .join("line")
+    .attr("class", "town-leader-line")
+    .attr("x1", (choice) => choice.point[0])
+    .attr("y1", (choice) => choice.point[1])
+    .attr("x2", (choice) => choice.displayPoint[0])
+    .attr("y2", (choice) => choice.displayPoint[1]);
 
   const spotGroups = mapLayer().append("g")
     .selectAll("g")
-    .data(spots)
+    .data(displaySpots)
     .join("g")
     .attr("class", "town-choice")
-    .attr("transform", (choice) => `translate(${choice.point[0]}, ${choice.point[1]})`);
+    .attr("transform", (choice) => `translate(${choice.displayPoint[0]}, ${choice.displayPoint[1]})`);
 
   spotGroups.append("circle")
     .attr("class", "town-hit-area")
@@ -1714,6 +1737,64 @@ function drawTownStage() {
     .attr("r", 5.8);
 
   bindSvgChoice(spotGroups, chooseTownChoice, (choice) => `Choose town option ${choice.label}`);
+}
+
+function spreadTownSpots(spots) {
+  const next = spots.map((spot, index) => {
+    const angle = (Math.PI * 2 * index) / Math.max(spots.length, 1);
+    return {
+      ...spot,
+      displayPoint: [
+        spot.point[0] + Math.cos(angle) * 0.4,
+        spot.point[1] + Math.sin(angle) * 0.4
+      ]
+    };
+  });
+  const margin = 26;
+
+  for (let pass = 0; pass < 90; pass += 1) {
+    next.forEach((spot) => {
+      spot.displayPoint[0] += (spot.point[0] - spot.displayPoint[0]) * 0.035;
+      spot.displayPoint[1] += (spot.point[1] - spot.displayPoint[1]) * 0.035;
+    });
+
+    for (let firstIndex = 0; firstIndex < next.length; firstIndex += 1) {
+      for (let secondIndex = firstIndex + 1; secondIndex < next.length; secondIndex += 1) {
+        const first = next[firstIndex];
+        const second = next[secondIndex];
+        let dx = second.displayPoint[0] - first.displayPoint[0];
+        let dy = second.displayPoint[1] - first.displayPoint[1];
+        let distance = Math.hypot(dx, dy);
+
+        if (distance < 0.001) {
+          const angle = ((firstIndex + secondIndex + 1) / next.length) * Math.PI * 2;
+          dx = Math.cos(angle);
+          dy = Math.sin(angle);
+          distance = 1;
+        }
+
+        if (distance >= MIN_TOWN_SPOT_DISPLAY_DISTANCE) continue;
+        const push = (MIN_TOWN_SPOT_DISPLAY_DISTANCE - distance) / 2;
+        const ux = dx / distance;
+        const uy = dy / distance;
+        first.displayPoint[0] -= ux * push;
+        first.displayPoint[1] -= uy * push;
+        second.displayPoint[0] += ux * push;
+        second.displayPoint[1] += uy * push;
+      }
+    }
+
+    next.forEach((spot) => {
+      spot.displayPoint[0] = Math.max(margin, Math.min(MAP_WIDTH - margin, spot.displayPoint[0]));
+      spot.displayPoint[1] = Math.max(margin, Math.min(MAP_HEIGHT - margin, spot.displayPoint[1]));
+    });
+  }
+
+  return next;
+}
+
+function townSpotOffset(choice) {
+  return Math.hypot(choice.displayPoint[0] - choice.point[0], choice.displayPoint[1] - choice.point[1]);
 }
 
 function drawLocalMapContext(path, bounds) {
@@ -1970,15 +2051,23 @@ function boundsPolygon(bounds) {
   };
 }
 
-function buildTownChoices(bounds = state.activeBounds || getPlayableBounds(state.target.country)) {
+function buildTownChoices() {
+  const country = state.target.country;
   const targetCity = state.target.city;
   const choices = [townChoiceFromCity(targetCity, true)];
   const used = new Set([townChoiceKey(choices[0])]);
   const sameCountryCities = namedTownCandidates(targetCity, used);
 
   while (choices.length < 4 && sameCountryCities.length) {
-    sameCountryCities.sort((first, second) => minTownDistance(second, choices, bounds) - minTownDistance(first, choices, bounds));
-    const choice = sameCountryCities.shift();
+    const ranked = sameCountryCities
+      .map((choice) => ({
+        choice,
+        score: townChoiceSpacingScore(choice, choices, country)
+      }))
+      .sort((first, second) => second.score - first.score);
+    const next = ranked.find((item) => item.score >= MIN_TOWN_CHOICE_SCREEN_DISTANCE) || ranked[0];
+    const choice = next.choice;
+    sameCountryCities.splice(sameCountryCities.indexOf(choice), 1);
     if (used.has(townChoiceKey(choice))) continue;
     used.add(townChoiceKey(choice));
     choices.push(choice);
@@ -2029,17 +2118,17 @@ function supplementalTownChoicesForCountry(country) {
   return SUPPLEMENTAL_TOWN_CHOICES.get(country.iso3) || [];
 }
 
-function minTownDistance(point, choices, bounds) {
-  return Math.min(...choices.map((choice) => normalizedTownDistance(point, choice, bounds)));
-}
+function townChoiceSpacingScore(candidate, choices, country) {
+  const bounds = townChoiceBounds([...choices, candidate], country);
+  const projection = localProjection(bounds);
+  const candidatePoint = projection([candidate.lng, candidate.lat]);
+  if (!candidatePoint) return 0;
 
-function normalizedTownDistance(first, second, bounds) {
-  const [[west, south], [east, north]] = bounds;
-  const lonSpan = Math.max(east - west, 0.001);
-  const latSpan = Math.max(north - south, 0.001);
-  const dx = (first.lng - second.lng) / lonSpan;
-  const dy = (first.lat - second.lat) / latSpan;
-  return Math.hypot(dx, dy);
+  return Math.min(...choices.map((choice) => {
+    const point = projection([choice.lng, choice.lat]);
+    if (!point) return 0;
+    return Math.hypot(candidatePoint[0] - point[0], candidatePoint[1] - point[1]);
+  }));
 }
 
 function townChoiceKey(choice) {
@@ -2058,6 +2147,10 @@ function boundsForPoints(bounds, points, country) {
   });
 
   return padBounds([[west, south], [east, north]], country);
+}
+
+function townChoiceBounds(points, country) {
+  return padBounds(cityBounds(points, country), country);
 }
 
 function townChoiceName(choice) {
@@ -2103,8 +2196,8 @@ function chooseCountry(country) {
 
   state.countryRevealed = true;
   state.activeBounds = getPlayableBounds(state.target.country);
-  state.townChoices = buildTownChoices(state.activeBounds);
-  state.activeBounds = boundsForPoints(state.activeBounds, state.townChoices, state.target.country);
+  state.townChoices = buildTownChoices();
+  state.activeBounds = townChoiceBounds(state.townChoices, state.target.country);
   completeStep("country", `Correct country. +${POINTS.country}`);
   state.stage = "town";
   renderStage();
