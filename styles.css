@@ -948,21 +948,10 @@ body[data-theme="satellite"] .country-selected {
   stroke-width: 3;
 }
 
-.country-marker,
 .city-marker {
   cursor: pointer;
   stroke: var(--surface-strong);
   stroke-width: 2;
-}
-
-.country-marker {
-  fill: var(--accent-2);
-}
-
-.country-marker:hover,
-.country-marker:focus {
-  fill: var(--hover);
-  outline: none;
 }
 
 .city-marker {

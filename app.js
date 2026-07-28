@@ -1640,20 +1640,6 @@ function drawContinentStage() {
     (feature) => chooseContinent(state.countryByMapId.get(feature.id).continent),
     (feature) => `Choose ${continentLabel(state.countryByMapId.get(feature.id)?.continent || "")}`
   );
-
-  const markers = mapLayer().append("g")
-    .selectAll("circle")
-    .data(state.countries.filter((country) => shouldShowCountryMarker(country, projection, path)))
-    .join("circle")
-    .attr("class", "country-marker continent-choice continent-marker")
-    .attr("cx", (country) => projection([country.lng, country.lat])?.[0] ?? -100)
-    .attr("cy", (country) => projection([country.lng, country.lat])?.[1] ?? -100)
-    .attr("r", (country) => country.area < 1200 ? 5.5 : 4.2)
-    .style("fill", (country) => CONTINENT_BY_KEY.get(country.continent)?.color || "var(--accent-2)")
-    .on("mouseenter", (event, country) => setContinentHover(country.continent))
-    .on("mouseleave", () => setContinentHover(null));
-
-  bindSvgChoice(markers, (country) => chooseContinent(country.continent), (country) => `Choose ${continentLabel(country.continent)}`);
 }
 
 function isCountrySelectable(country) {
@@ -1687,16 +1673,6 @@ function drawCountryStage() {
     (feature) => chooseCountry(state.countryByMapId.get(feature.id)),
     (feature) => `Choose ${state.countryByMapId.get(feature.id)?.name || "country"}`
   );
-}
-
-function shouldShowCountryMarker(country, projection, path) {
-  const feature = displayFeatureForCountry(country);
-  if (!feature) return true;
-  const bounds = path.bounds(feature);
-  const width = bounds[1][0] - bounds[0][0];
-  const height = bounds[1][1] - bounds[0][1];
-  const point = projection([country.lng, country.lat]);
-  return Boolean(point) && (width < 9 || height < 9 || country.area < 2000);
 }
 
 function drawTownStage() {
