@@ -1419,7 +1419,23 @@ body[data-theme="satellite"] .country-base.is-touch-selected {
   }
 
   .side-panel .secondary-action {
-    display: none;
+    width: auto;
+    min-height: 34px;
+    border-color: transparent;
+    background: transparent;
+    color: var(--muted);
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    box-shadow: none;
+    opacity: 0.82;
+  }
+
+  .side-panel .secondary-action:hover,
+  .side-panel .secondary-action:focus {
+    border-color: var(--line);
+    background: var(--surface-strong);
+    color: var(--ink);
+    opacity: 1;
   }
 
   #hoverLabel {
