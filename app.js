@@ -941,6 +941,9 @@ function cueTargetName() {
   els.targetName.classList.remove("target-name-cue");
   void els.targetName.offsetWidth;
   els.targetName.classList.add("target-name-cue");
+  els.targetName.addEventListener("animationend", () => {
+    els.targetName.classList.remove("target-name-cue");
+  }, { once: true });
 }
 
 function restartToMenu() {
