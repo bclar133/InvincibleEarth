@@ -420,7 +420,7 @@ const CITY_FACTS = new Map([
   ["CAN:Vancouver", "Vancouver's port, mountains, and mild rainy climate make it feel very different from inland Canada."],
   ["CHE:Geneva", "Geneva is known for diplomacy, watchmaking, and its position on a lake at the edge of the Alps."],
   ["CHE:Zurich", "Zurich is a global finance city, but it also has a strong lakeside swimming culture in summer."],
-  ["CHL:Santiago", "Santiago sits in a basin beside the Andes, so mountains are a huge clue to where the city is."],
+  ["CHL:Santiago", "Santiago sits in a basin beside the Andes, with mountains visible from many parts of the city."],
   ["CHN:Beijing", "Beijing is home to the Forbidden City and is a political centre with food traditions such as Peking duck."],
   ["CHN:Guangzhou", "Guangzhou is a Pearl River Delta trade city and one of the homes of Cantonese food culture."],
   ["CHN:Shanghai", "Shanghai sits where the Yangtze River Delta meets the sea, helping it become a huge port and finance city."],
@@ -428,14 +428,14 @@ const CITY_FACTS = new Map([
   ["CHN:Chengdu", "Chengdu is famous for Sichuan food, teahouses, and being a gateway to giant panda conservation areas."],
   ["COL:Bogota", "Bogota sits high in the Andes, so its climate is cooler than many people expect near the Equator."],
   ["COL:Medellin", "Medellin is nicknamed the City of Eternal Spring because its valley climate stays mild year-round."],
-  ["CZE:Prague", "Prague's old town, castle, and bridges grew around the Vltava River, a strong map clue in the city."],
+  ["CZE:Prague", "Prague's old town, castle, and bridges grew around the Vltava River, which still shapes the historic centre."],
   ["DEU:Berlin", "Berlin is known for museums, street art, techno clubs, and the history of the Berlin Wall."],
   ["DEU:Frankfurt", "Frankfurt is one of Europe's busiest airport and finance hubs, with a skyline rare for German cities."],
   ["DEU:Hamburg", "Hamburg is a major port city, even though it sits inland on the Elbe River rather than directly on the open sea."],
   ["DEU:Munich", "Munich is famous for Oktoberfest, football, and its position close to the Bavarian Alps."],
   ["DNK:Copenhagen", "Copenhagen is famous for cycling, harbour swimming, and the bridge-and-tunnel link to Sweden."],
   ["EGY:Alexandria", "Alexandria faces the Mediterranean and was once home to one of the ancient world's most famous libraries."],
-  ["EGY:Cairo", "Cairo sits beside the Nile and near the pyramids of Giza, making the river a huge location clue."],
+  ["EGY:Cairo", "Cairo sits beside the Nile and near the pyramids of Giza, placing the city close to one of the world's great ancient landscapes."],
   ["ESP:Barcelona", "Barcelona mixes Mediterranean beaches, football, and Gaudi architecture such as the Sagrada Familia."],
   ["ESP:Madrid", "Madrid sits high on Spain's central plateau, which helps explain its hot summers and cold winter nights."],
   ["ESP:Sevilla", "Sevilla is famous for flamenco, orange trees, very hot summers, and its position on the Guadalquivir River."],
@@ -562,7 +562,7 @@ const CITY_FACTS = new Map([
   ["ZAF:Johannesburg", "Johannesburg grew from a gold rush and remains South Africa's biggest economic centre."],
   ["ZAF:Pretoria", "Pretoria is known for jacaranda-lined streets and is one of South Africa's capital cities."],
   ["ZWE:Bulawayo", "Bulawayo grew as a rail and industrial centre and sits near Matobo National Park's granite hills and rock art."],
-  ["ZWE:Harare", "Harare is Zimbabwe's capital, set on a high plateau where jacaranda trees and mild weather are strong city clues."]
+  ["ZWE:Harare", "Harare is Zimbabwe's capital, set on a high plateau with jacaranda-lined streets and mild weather."]
 ]);
 
 const state = {
@@ -1060,7 +1060,7 @@ function renderChoicePanel() {
 
   const step = STEPS.find((item) => item.key === state.stage);
   const help = {
-    hemisphere: "The city name is your clue. Pick north or south of the Equator.",
+    hemisphere: "Use the city name to pick north or south of the Equator.",
     continent: "Hover over the map. Countries light up by continent.",
     country: "Only the selected continent is active. Hover over a country shape, then choose it.",
     town: "Choose one of the four map spots for the town or city."
@@ -1117,7 +1117,7 @@ function climateFact(city) {
   }
 
   if (absLatitude < 23.5) {
-    return `${city.name} is in the tropics, so heat, humidity, and wet-season patterns are often better clues than four-season weather.`;
+    return `${city.name} is in the tropics, where heat, humidity, and wet-season patterns shape the climate more than four distinct seasons.`;
   }
 
   if (city.lat < -30) {
@@ -1128,14 +1128,14 @@ function climateFact(city) {
     return `${city.name} sits at about ${latitude}, so summer days can be very long and winter daylight can be short.`;
   }
 
-  return `${city.name} sits at about ${latitude}, a useful climate clue when comparing it with tropical or high-latitude cities.`;
+  return `${city.name} sits at about ${latitude}, which strongly influences its daylight patterns and climate.`;
 }
 
 function regionalFact(city, country) {
   const subregion = country.subregion || country.region || "";
 
   if (subregion.includes("Caribbean")) {
-    return `${city.name}'s Caribbean setting makes ports, tourism, seafood, and hurricane-season weather useful location clues.`;
+    return `${city.name}'s Caribbean setting connects the city with ports, tourism, seafood, and hurricane-season weather.`;
   }
 
   if (subregion.includes("South-Eastern Asia")) {
@@ -1151,11 +1151,11 @@ function regionalFact(city, country) {
   }
 
   if (subregion.includes("South America")) {
-    return `${city.name} is in South America, where coasts, mountain ranges, football culture, and river systems are strong map clues.`;
+    return `${city.name} is in South America, where coasts, mountain ranges, football culture, and river systems shape many major cities.`;
   }
 
   if (subregion.includes("Australia and New Zealand")) {
-    return `${city.name} is in Australasia, where coastal cities, sport, beaches, and Southern Hemisphere seasons are useful clues.`;
+    return `${city.name} is in Australasia, where coastal cities, sport, beaches, and Southern Hemisphere seasons are central to many urban identities.`;
   }
 
   return "";
@@ -1172,18 +1172,18 @@ function cityFact() {
   const area = formatArea(country.area);
 
   if (population && city.population >= 10000000) {
-    return `${city.name} is a megacity-scale clue: the game data lists about ${population} people, larger than many countries.`;
+    return `${city.name} has about ${population} people, which is larger than the population of many countries.`;
   }
 
   if (population && city.population >= 1000000) {
-    return `${city.name} is a major urban centre, with about ${population} people in the game data.`;
+    return `${city.name} is a major urban centre, with about ${population} people.`;
   }
 
   const regionFact = regionalFact(city, country);
   if (regionFact) return regionFact;
 
   if (area && country.area <= 1500) {
-    return `${country.name} covers only about ${area}, so finding ${city.name} on a world map can come down to a tiny coastline or island clue.`;
+    return `${country.name} covers only about ${area}, so ${city.name} sits within a very compact national territory.`;
   }
 
   if (city.capital === "primary") {
@@ -1191,7 +1191,7 @@ function cityFact() {
   }
 
   if (population) {
-    return `${city.name} has about ${population} people in the game data, so it is a smaller target than the world's headline megacities.`;
+    return `${city.name} has about ${population} people, making it much smaller than the world's headline megacities.`;
   }
 
   return climateFact(city);
