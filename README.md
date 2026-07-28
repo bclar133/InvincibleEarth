@@ -15,7 +15,7 @@
 - Wrong answers end the current turn and reveal the city
 - Correct city location unlocks a 4-choice country flag bonus
 - Round-end panels show short, more readable city facts about population, food, trade, sport, weather, or history
-- Easy mode uses a smaller pool of highly recognisable global cities
+- Easy mode uses an expanded curated pool of highly recognisable capitals, major cities, and selected Pacific/African towns
 - Medium mode adds more famous capitals, second cities, and major global centres without using the full obscure pool
 - Bahrain, Hong Kong, and Singapore are excluded because the bundled border map does not provide reliable selectable country shapes for them
 - Scoring: +1 hemisphere, +1 continent, +2 country, +5 town, +2 flag
