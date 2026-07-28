@@ -714,16 +714,6 @@ body[data-theme="satellite"] .local-context {
   pointer-events: none;
 }
 
-.small-country-choice {
-  cursor: pointer;
-  outline: none;
-}
-
-.small-country-hit-area {
-  fill: transparent;
-  pointer-events: all;
-}
-
 body[data-theme="satellite"] .country-selected {
   fill: rgba(118, 200, 147, 0.2);
   stroke: #9dd884;

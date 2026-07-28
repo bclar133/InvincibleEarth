@@ -42,7 +42,7 @@ const CONTINENTS = [
 
 const CONTINENT_BY_KEY = new Map(CONTINENTS.map((continent) => [continent.key, continent]));
 const TOWN_SPOT_LABELS = ["A", "B", "C", "D"];
-const EXCLUDED_COUNTRY_ISO3 = new Set(["SGP"]);
+const EXCLUDED_COUNTRY_ISO3 = new Set(["BHR", "HKG", "SGP"]);
 
 const EASY_CITY_KEYS = new Set([
   "ARG:Buenos Aires",
@@ -73,7 +73,6 @@ const EASY_CITY_KEYS = new Set([
   "FRA:Paris",
   "GBR:London",
   "GRC:Athens",
-  "HKG:Hong Kong",
   "IDN:Jakarta",
   "IND:Delhi",
   "IND:Kolkata",
@@ -129,7 +128,6 @@ const MEDIUM_CITY_KEYS = new Set([
   "BGR:Sofia",
   "BGD:Dhaka",
   "BGD:Chattogram",
-  "BHR:Manama",
   "BIH:Sarajevo",
   "BLR:Minsk",
   "BOL:La Paz",
@@ -526,7 +524,16 @@ function prepareCountries() {
       return nextCountry;
     });
 
+  rebuildCountryLookup();
+}
+
+function rebuildCountryLookup() {
   state.countryByMapId = new Map(state.countries.map((country) => [country.mapId, country]));
+}
+
+function keepCountriesWithMapFeatures() {
+  state.countries = state.countries.filter((country) => state.featureByMapId.has(country.mapId));
+  rebuildCountryLookup();
 }
 
 async function loadWorldMap() {
@@ -535,6 +542,7 @@ async function loadWorldMap() {
     const featureCollection = topojson.feature(topology, topology.objects.countries);
     state.geoFeatures = featureCollection.features.filter((feature) => feature.id !== "010");
     state.featureByMapId = new Map(state.geoFeatures.map((feature) => [feature.id, feature]));
+    keepCountriesWithMapFeatures();
     state.mapReady = true;
     drawMenuPreview();
     els.loadingNote.textContent = `${state.countries.length} countries and territories ready.`;
@@ -1289,8 +1297,6 @@ function setCountryHover(country) {
   const mapId = country?.mapId || null;
   mapLayer().selectAll(".country-base")
     .classed("is-country-hovered", (feature) => Boolean(mapId && feature.id === mapId));
-  mapLayer().selectAll(".small-country-choice")
-    .classed("is-country-hovered", (item) => Boolean(mapId && item.mapId === mapId));
 
   setHover(country ? country.name : null);
 }
@@ -1408,8 +1414,6 @@ function drawCountryStage() {
     (feature) => chooseCountry(state.countryByMapId.get(feature.id)),
     (feature) => `Choose ${state.countryByMapId.get(feature.id)?.name || "country"}`
   );
-
-  drawSmallCountryChoices(projection, path);
 }
 
 function shouldShowCountryMarker(country, projection, path) {
@@ -1420,47 +1424,6 @@ function shouldShowCountryMarker(country, projection, path) {
   const height = bounds[1][1] - bounds[0][1];
   const point = projection([country.lng, country.lat]);
   return Boolean(point) && (width < 9 || height < 9 || country.area < 2000);
-}
-
-function drawSmallCountryChoices(projection, path) {
-  const smallCountries = state.countries
-    .filter((country) => isCountrySelectable(country) && shouldShowCountryMarker(country, projection, path))
-    .map((country) => ({
-      ...country,
-      point: countryHitPoint(country, projection, path),
-      missingFeature: !state.featureByMapId.has(country.mapId)
-    }))
-    .filter((country) => country.point)
-    .sort((first, second) => Number(first.iso3 === state.target.country.iso3) - Number(second.iso3 === state.target.country.iso3));
-
-  const choices = mapLayer().append("g")
-    .attr("class", "small-country-layer")
-    .selectAll("g")
-    .data(smallCountries)
-    .join("g")
-    .attr("class", "small-country-choice")
-    .attr("data-country", (country) => country.iso3)
-    .attr("transform", (country) => `translate(${country.point[0]}, ${country.point[1]})`)
-    .on("mouseenter", (event, country) => setCountryHover(country))
-    .on("mouseleave", () => setCountryHover(null));
-
-  choices.append("circle")
-    .attr("class", "small-country-hit-area")
-    .attr("r", (country) => country.missingFeature ? 14 : 11);
-
-  bindSvgChoice(choices, chooseCountry, (country) => `Choose ${country.name}`);
-}
-
-function countryHitPoint(country, projection, path) {
-  const feature = state.featureByMapId.get(country.mapId);
-  if (feature) {
-    const centroid = path.centroid(feature);
-    if (Number.isFinite(centroid?.[0]) && Number.isFinite(centroid?.[1])) return centroid;
-  }
-
-  const point = projection([country.lng, country.lat]);
-  if (!Number.isFinite(point?.[0]) || !Number.isFinite(point?.[1])) return null;
-  return point;
 }
 
 function drawTownStage() {
