@@ -47,6 +47,55 @@ const EXCLUDED_COUNTRY_ISO3 = new Set(["BHR", "HKG", "SGP"]);
 const COUNTRY_MAIN_PART_BOUNDS = new Map([
   ["FRA", [[-6, 41], [10, 52]]]
 ]);
+const SUPPLEMENTAL_TOWN_CHOICES = new Map([
+  ["BHS", [
+    { name: "Marsh Harbour", ascii: "Marsh Harbour", lat: 26.5412, lng: -77.0636 }
+  ]],
+  ["BLZ", [
+    { name: "San Ignacio", ascii: "San Ignacio", lat: 17.1588, lng: -89.0696 }
+  ]],
+  ["BRN", [
+    { name: "Kuala Belait", ascii: "Kuala Belait", lat: 4.5836, lng: 114.2312 }
+  ]],
+  ["CYP", [
+    { name: "Paphos", ascii: "Paphos", lat: 34.772, lng: 32.4297 }
+  ]],
+  ["DJI", [
+    { name: "Tadjoura", ascii: "Tadjoura", lat: 11.7853, lng: 42.8844 }
+  ]],
+  ["SWZ", [
+    { name: "Siteki", ascii: "Siteki", lat: -26.4525, lng: 31.9472 }
+  ]],
+  ["FLK", [
+    { name: "Goose Green", ascii: "Goose Green", lat: -51.8295, lng: -58.9709 },
+    { name: "Port Howard", ascii: "Port Howard", lat: -51.615, lng: -59.523 },
+    { name: "Fox Bay", ascii: "Fox Bay", lat: -51.95, lng: -60.065 }
+  ]],
+  ["FJI", [
+    { name: "Lautoka", ascii: "Lautoka", lat: -17.6167, lng: 177.4667 }
+  ]],
+  ["GMB", [
+    { name: "Bakau", ascii: "Bakau", lat: 13.4781, lng: -16.6819 }
+  ]],
+  ["KWT", [
+    { name: "Salmiya", ascii: "Salmiya", lat: 29.3339, lng: 48.0761 }
+  ]],
+  ["LUX", [
+    { name: "Differdange", ascii: "Differdange", lat: 49.5217, lng: 5.8914 }
+  ]],
+  ["NCL", [
+    { name: "Paita", ascii: "Paita", lat: -22.1333, lng: 166.3667 }
+  ]],
+  ["QAT", [
+    { name: "Al Wakrah", ascii: "Al Wakrah", lat: 25.1715, lng: 51.6034 }
+  ]],
+  ["TLS", [
+    { name: "Viqueque", ascii: "Viqueque", lat: -8.8575, lng: 126.3647 }
+  ]],
+  ["VUT", [
+    { name: "Lakatoro", ascii: "Lakatoro", lat: -16.0999, lng: 167.4164 }
+  ]]
+]);
 
 const EASY_CITY_KEYS = new Set([
   "ARG:Buenos Aires",
@@ -1643,9 +1692,11 @@ function shouldShowCountryMarker(country, projection, path) {
 
 function drawTownStage() {
   clearMap();
-  const bounds = state.activeBounds || getPlayableBounds(state.target.country);
+  let bounds = state.activeBounds || getPlayableBounds(state.target.country);
   if (!state.townChoices.length) {
     state.townChoices = buildTownChoices(bounds);
+    state.activeBounds = boundsForPoints(bounds, state.townChoices, state.target.country);
+    bounds = state.activeBounds;
   }
 
   const projection = localProjection(bounds);
@@ -1664,7 +1715,7 @@ function drawTownStage() {
     .join("g")
     .attr("class", "town-choice")
     .attr("transform", (choice) => `translate(${choice.point[0]}, ${choice.point[1]})`)
-    .on("mouseenter", (event, choice) => setHover(`Town spot ${choice.label}`))
+    .on("mouseenter", (event, choice) => setHover(choice.name))
     .on("mouseleave", () => setHover());
 
   spotGroups.append("circle")
@@ -1679,7 +1730,7 @@ function drawTownStage() {
     .attr("class", "town-spot")
     .attr("r", 5.8);
 
-  bindSvgChoice(spotGroups, chooseTownChoice, (choice) => `Choose town spot ${choice.label}`);
+  bindSvgChoice(spotGroups, chooseTownChoice, (choice) => `Choose ${choice.name}`);
 }
 
 function drawLocalMapContext(path, bounds) {
@@ -1940,22 +1991,12 @@ function buildTownChoices(bounds = state.activeBounds || getPlayableBounds(state
   const targetCity = state.target.city;
   const choices = [townChoiceFromCity(targetCity, true)];
   const used = new Set([townChoiceKey(choices[0])]);
-  const sameCountryCities = state.target.country.cities.filter((city) => (
-    city.id !== targetCity.id &&
-    pointInBounds(city, bounds) &&
-    !used.has(townChoiceKey(city))
-  )).map((city) => townChoiceFromCity(city, false));
+  const sameCountryCities = namedTownCandidates(targetCity, used);
 
   while (choices.length < 4 && sameCountryCities.length) {
     sameCountryCities.sort((first, second) => minTownDistance(second, choices, bounds) - minTownDistance(first, choices, bounds));
     const choice = sameCountryCities.shift();
-    if (used.has(townChoiceKey(choice)) || minTownDistance(choice, choices, bounds) < 0.16) continue;
-    used.add(townChoiceKey(choice));
-    choices.push(choice);
-  }
-
-  while (choices.length < 4) {
-    const choice = generatedTownChoice(bounds, choices, choices.length);
+    if (used.has(townChoiceKey(choice))) continue;
     used.add(townChoiceKey(choice));
     choices.push(choice);
   }
@@ -1964,6 +2005,18 @@ function buildTownChoices(bounds = state.activeBounds || getPlayableBounds(state
     ...choice,
     label: TOWN_SPOT_LABELS[index]
   }));
+}
+
+function namedTownCandidates(targetCity, used) {
+  const country = state.target.country;
+  const dataCities = country.cities
+    .filter((city) => city.id !== targetCity.id)
+    .map((city) => townChoiceFromCity(city, false));
+  const supplementalCities = supplementalTownChoicesForCountry(country)
+    .map((city) => townChoiceFromSupplemental(city, country));
+
+  return [...dataCities, ...supplementalCities]
+    .filter((choice) => !used.has(townChoiceKey(choice)));
 }
 
 function townChoiceFromCity(city, correct) {
@@ -1977,34 +2030,20 @@ function townChoiceFromCity(city, correct) {
   };
 }
 
-function generatedTownChoice(bounds, existingChoices, index) {
-  const ranked = generatedTownCandidates(bounds)
-    .sort((first, second) => minTownDistance(second, existingChoices, bounds) - minTownDistance(first, existingChoices, bounds));
-  const point = ranked.find((candidate) => minTownDistance(candidate, existingChoices, bounds) >= 0.16) || ranked[0];
-
+function townChoiceFromSupplemental(city, country) {
   return {
-    id: `generated-${index}-${point.lng.toFixed(3)}-${point.lat.toFixed(3)}`,
-    name: `Spot ${index + 1}`,
-    lat: point.lat,
-    lng: point.lng,
+    id: `supplemental-${country.iso3}-${city.ascii}`,
+    name: city.name,
+    lat: Number(city.lat),
+    lng: Number(city.lng),
     correct: false,
-    generated: true
+    generated: false,
+    supplemental: true
   };
 }
 
-function generatedTownCandidates(bounds) {
-  const [[west, south], [east, north]] = bounds;
-  const fractions = [0.18, 0.3, 0.42, 0.58, 0.7, 0.82];
-  const candidates = fractions.flatMap((x) => fractions.map((y) => ({
-    lng: west + (east - west) * x,
-    lat: south + (north - south) * y
-  })));
-  const feature = displayFeatureForCountry(state.target.country);
-  const countryCandidates = feature
-    ? candidates.filter((candidate) => d3.geoContains(feature, [candidate.lng, candidate.lat]))
-    : candidates;
-
-  return countryCandidates.length ? countryCandidates : candidates;
+function supplementalTownChoicesForCountry(country) {
+  return SUPPLEMENTAL_TOWN_CHOICES.get(country.iso3) || [];
 }
 
 function minTownDistance(point, choices, bounds) {
@@ -2024,14 +2063,23 @@ function townChoiceKey(choice) {
   return `${Number(choice.lng).toFixed(4)}:${Number(choice.lat).toFixed(4)}`;
 }
 
-function pointInBounds(point, bounds) {
-  const [[west, south], [east, north]] = bounds;
-  return point.lng >= west && point.lng <= east && point.lat >= south && point.lat <= north;
+function boundsForPoints(bounds, points, country) {
+  let [[west, south], [east, north]] = normalizeBounds(bounds);
+
+  points.forEach((point) => {
+    if (!Number.isFinite(point.lng) || !Number.isFinite(point.lat)) return;
+    west = Math.min(west, point.lng);
+    east = Math.max(east, point.lng);
+    south = Math.min(south, point.lat);
+    north = Math.max(north, point.lat);
+  });
+
+  return padBounds([[west, south], [east, north]], country);
 }
 
 function townChoiceName(choice) {
   if (!choice) return "that spot";
-  return choice.generated ? `town spot ${choice.label}` : choice.name;
+  return choice.name;
 }
 
 function hemisphereLabel(choice) {
@@ -2073,6 +2121,7 @@ function chooseCountry(country) {
   state.countryRevealed = true;
   state.activeBounds = getPlayableBounds(state.target.country);
   state.townChoices = buildTownChoices(state.activeBounds);
+  state.activeBounds = boundsForPoints(state.activeBounds, state.townChoices, state.target.country);
   completeStep("country", `Correct country. +${POINTS.country}`);
   state.stage = "town";
   renderStage();
@@ -2106,7 +2155,7 @@ function failRound(key, message) {
     title: "Turn ended",
     text: message
   };
-  state.revealBounds = getPlayableBounds(state.target.country);
+  state.revealBounds = boundsForPoints(state.activeBounds || getPlayableBounds(state.target.country), [state.target.city], state.target.country);
   state.currentOutcome = makeOutcome(false, false);
   state.stage = "reveal";
   renderStage();
