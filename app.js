@@ -602,7 +602,8 @@ const state = {
   zoom: null,
   zoomTransform: d3.zoomIdentity,
   currentProjection: null,
-  satelliteLayer: null
+  satelliteLayer: null,
+  targetCueTimer: null
 };
 
 const els = {
@@ -938,12 +939,17 @@ function startRound(index) {
 }
 
 function cueTargetName() {
+  const roundBlock = els.targetName.closest(".round-block");
+  window.clearTimeout(state.targetCueTimer);
   els.targetName.classList.remove("target-name-cue");
+  roundBlock?.classList.remove("target-panel-cue");
   void els.targetName.offsetWidth;
   els.targetName.classList.add("target-name-cue");
-  els.targetName.addEventListener("animationend", () => {
+  roundBlock?.classList.add("target-panel-cue");
+  state.targetCueTimer = window.setTimeout(() => {
     els.targetName.classList.remove("target-name-cue");
-  }, { once: true });
+    roundBlock?.classList.remove("target-panel-cue");
+  }, 1800);
 }
 
 function restartToMenu() {
