@@ -796,6 +796,10 @@ body[data-theme="satellite"] .country-selected {
   fill: var(--bad);
 }
 
+.summary-marker-dot {
+  stroke-width: 2.5;
+}
+
 .summary-city {
   cursor: pointer;
   outline: none;

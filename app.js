@@ -1547,15 +1547,15 @@ function drawSummaryStage() {
 
   markerGroups.append("circle")
     .attr("class", "summary-marker-hit")
-    .attr("r", 14);
+    .attr("r", 22);
 
   markerGroups.append("circle")
     .attr("class", "summary-marker-ring")
-    .attr("r", 9);
+    .attr("r", 13);
 
   markerGroups.append("circle")
-    .attr("class", "city-marker")
-    .attr("r", (item) => item.found ? 4.5 : 3.3)
+    .attr("class", "city-marker summary-marker-dot")
+    .attr("r", (item) => item.found ? 7.5 : 6.8)
     .style("fill", (item) => item.found ? "var(--good)" : "var(--bad)");
 }
 
