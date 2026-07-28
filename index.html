@@ -4,53 +4,119 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Invincible Earth</title>
-  <meta name="description" content="Invincible Earth is a browser-based strategy game prototype about keeping Earth alive through changing eras.">
+  <meta name="description" content="Invincible Earth is a geography map game about finding towns and cities step by step on a border-only world map.">
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <main class="shell">
-    <section class="hero">
+<body data-theme="classroom">
+  <main class="app-shell">
+    <header class="topbar">
       <div>
-        <p class="eyebrow">World strategy prototype</p>
+        <p class="eyebrow">World map challenge</p>
         <h1>Invincible Earth</h1>
-        <p class="lede">Guide Earth through 12 eras. Balance climate, resources, population and stability before pressure overwhelms the planet.</p>
       </div>
-      <div class="planet" aria-hidden="true">
-        <span></span>
+      <div class="score-strip" aria-live="polite">
+        <span>Score</span>
+        <strong id="scoreLabel">0</strong>
+        <span id="possibleLabel">/ 0</span>
       </div>
-    </section>
+    </header>
 
-    <section class="panel setup" id="setupPanel">
-      <div class="section-heading">
-        <h2>Choose A Starting Region</h2>
-        <p>Each region gives Earth a different opening profile.</p>
-      </div>
-      <div class="region-grid" id="regionGrid"></div>
-    </section>
-
-    <section class="dashboard hidden" id="gamePanel">
-      <aside class="panel status-panel">
-        <div class="section-heading">
-          <h2 id="eraTitle">Era 1</h2>
-          <p id="regionLabel"></p>
+    <section class="menu-screen" id="menuScreen">
+      <div class="menu-copy">
+        <svg id="menuMap" class="menu-map" viewBox="0 0 1000 560" role="img" aria-label="World map preview"></svg>
+        <div>
+          <h2>Find cities by narrowing the world.</h2>
+          <p>Choose a hemisphere, locate the country, zoom through smaller map zones, then earn a bonus by spotting the right flag.</p>
+          <p class="challenge-note">It's easy to cheat, but can you get it without looking it up?</p>
         </div>
-        <div class="meters" id="meters"></div>
-        <button class="secondary" id="resetButton" type="button">New Earth</button>
+      </div>
+
+      <form class="setup-panel" id="setupForm">
+        <div class="setting-row">
+          <label for="placesInput">Places to find</label>
+          <div class="number-control">
+            <input id="placesInput" type="range" min="3" max="10" value="5">
+            <output id="placesOutput" for="placesInput">5</output>
+          </div>
+        </div>
+
+        <fieldset class="setting-row">
+          <legend>Difficulty</legend>
+          <div class="segmented-control" id="difficultyControl">
+            <button type="button" class="is-selected" data-difficulty="easy">Easy</button>
+            <button type="button" data-difficulty="medium">Medium</button>
+            <button type="button" data-difficulty="hard">Difficult</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="setting-row">
+          <legend>Map style</legend>
+          <div class="segmented-control" id="themeControl">
+            <button type="button" class="is-selected" data-theme-choice="classroom">Classroom</button>
+            <button type="button" data-theme-choice="arcade">Arcade</button>
+            <button type="button" data-theme-choice="satellite">Satellite</button>
+          </div>
+        </fieldset>
+
+        <div class="rules-grid" aria-label="Scoring">
+          <span><strong>+1</strong> Hemisphere</span>
+          <span><strong>+1</strong> Continent</span>
+          <span><strong>+2</strong> Country</span>
+          <span><strong>+5</strong> Town</span>
+          <span><strong>+2</strong> Flag</span>
+        </div>
+
+        <p class="loading-note" id="loadingNote">Loading the border map...</p>
+        <button class="primary-action" id="startButton" type="submit" disabled>Start Game</button>
+      </form>
+    </section>
+
+    <section class="game-screen hidden" id="gameScreen">
+      <aside class="side-panel">
+        <div class="round-block">
+          <span id="roundLabel">Round 1 of 5</span>
+          <h2 id="targetName">Tokyo</h2>
+          <p id="targetMeta">Country hidden</p>
+        </div>
+
+        <ol class="step-list" id="stepList"></ol>
+
+        <div class="round-score">
+          <span>This round</span>
+          <strong id="roundScoreLabel">0</strong>
+        </div>
+
+        <button class="secondary-action" id="newGameButton" type="button">New Game</button>
       </aside>
 
-      <section class="panel action-panel">
-        <div class="section-heading">
-          <h2>World Council</h2>
-          <p id="turnSummary">Choose your response.</p>
+      <section class="map-panel">
+        <div class="map-toolbar">
+          <div>
+            <p class="eyebrow" id="stageLabel">Hemisphere</p>
+            <h2 id="stagePrompt">Choose the hemisphere.</h2>
+          </div>
+          <div class="map-actions">
+            <p id="hoverLabel">Hover over a highlighted map choice.</p>
+            <div class="zoom-controls" aria-label="Map zoom controls">
+              <button id="zoomOutButton" type="button" aria-label="Zoom out">-</button>
+              <button id="zoomResetButton" type="button" aria-label="Reset zoom">Reset</button>
+              <button id="zoomInButton" type="button" aria-label="Zoom in">+</button>
+            </div>
+          </div>
         </div>
-        <div class="event-card" id="eventCard"></div>
-        <div class="action-grid" id="actionGrid"></div>
-        <div class="log" id="log" aria-live="polite"></div>
+        <svg id="worldMap" class="world-map" viewBox="0 0 1000 560" role="img" aria-label="World map game board"></svg>
+        <p class="map-attribution">Satellite imagery: Esri World Imagery</p>
       </section>
+
+      <aside class="choice-panel" id="choicePanel" aria-live="polite"></aside>
     </section>
   </main>
 
+  <script src="vendor/d3.min.js"></script>
+  <script src="vendor/topojson-client.min.js"></script>
+  <script src="data/game-data.js"></script>
+  <script src="data/countries-110m.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
-
