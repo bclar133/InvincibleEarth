@@ -670,6 +670,13 @@ function startRound(index) {
   state.flagAnswered = false;
   state.selectedFlagIso2 = null;
   renderStage();
+  cueTargetName();
+}
+
+function cueTargetName() {
+  els.targetName.classList.remove("target-name-cue");
+  void els.targetName.offsetWidth;
+  els.targetName.classList.add("target-name-cue");
 }
 
 function restartToMenu() {
