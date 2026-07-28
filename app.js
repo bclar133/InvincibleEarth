@@ -1714,9 +1714,7 @@ function drawTownStage() {
     .data(spots)
     .join("g")
     .attr("class", "town-choice")
-    .attr("transform", (choice) => `translate(${choice.point[0]}, ${choice.point[1]})`)
-    .on("mouseenter", (event, choice) => setHover(choice.name))
-    .on("mouseleave", () => setHover());
+    .attr("transform", (choice) => `translate(${choice.point[0]}, ${choice.point[1]})`);
 
   spotGroups.append("circle")
     .attr("class", "town-hit-area")
@@ -1730,7 +1728,7 @@ function drawTownStage() {
     .attr("class", "town-spot")
     .attr("r", 5.8);
 
-  bindSvgChoice(spotGroups, chooseTownChoice, (choice) => `Choose ${choice.name}`);
+  bindSvgChoice(spotGroups, chooseTownChoice, (choice) => `Choose town option ${choice.label}`);
 }
 
 function drawLocalMapContext(path, bounds) {
