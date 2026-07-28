@@ -42,6 +42,7 @@ const CONTINENTS = [
 
 const CONTINENT_BY_KEY = new Map(CONTINENTS.map((continent) => [continent.key, continent]));
 const TOWN_SPOT_LABELS = ["A", "B", "C", "D"];
+const EXCLUDED_COUNTRY_ISO3 = new Set(["SGP"]);
 
 const EASY_CITY_KEYS = new Set([
   "ARG:Buenos Aires",
@@ -97,7 +98,6 @@ const EASY_CITY_KEYS = new Set([
   "PRT:Lisbon",
   "RUS:Moscow",
   "SAU:Riyadh",
-  "SGP:Singapore",
   "SWE:Stockholm",
   "THA:Bangkok",
   "TUR:Istanbul",
@@ -341,7 +341,6 @@ const CITY_FACTS = new Map([
   ["RUS:Saint Petersburg", "Saint Petersburg was built as Russia's window to Europe, with canals, palaces, and long summer twilight."],
   ["SAU:Riyadh", "Riyadh is a desert capital where summer heat shapes daily life, buildings, and transport."],
   ["SEN:Dakar", "Dakar sits on a peninsula reaching into the Atlantic, making it an important West African port and music city."],
-  ["SGP:Singapore", "Singapore became one of the world's busiest port cities by sitting on sea routes between the Indian and Pacific oceans."],
   ["SWE:Stockholm", "Stockholm spreads across islands, so bridges, ferries, ice, and water are central to the city."],
   ["THA:Bangkok", "Bangkok is famous for street food, canals, temples, and a hot monsoon climate."],
   ["TUR:Ankara", "Ankara replaced Istanbul as Turkey's capital and sits inland on the Anatolian plateau."],
@@ -506,7 +505,12 @@ function currentPrompt() {
 function prepareCountries() {
   const source = window.INVINCIBLE_EARTH_DATA?.countries || [];
   state.countries = source
-    .filter((country) => country.iso2 && country.iso2.length === 2 && country.cities?.length)
+    .filter((country) => (
+      country.iso2 &&
+      country.iso2.length === 2 &&
+      country.cities?.length &&
+      !EXCLUDED_COUNTRY_ISO3.has(country.iso3)
+    ))
     .map((country) => {
       const nextCountry = {
         ...country,

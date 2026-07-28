@@ -17,6 +17,7 @@
 - Round-end panels show short, more readable city facts about population, food, trade, sport, weather, or history
 - Easy mode uses a smaller pool of highly recognisable global cities
 - Medium mode adds more famous capitals, second cities, and major global centres without using the full obscure pool
+- Singapore is temporarily excluded until tiny-territory country selection can be made reliable enough
 - Scoring: +1 hemisphere, +1 continent, +2 country, +5 town, +2 flag
 
 ## Files
