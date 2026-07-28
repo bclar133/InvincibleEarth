@@ -25,6 +25,9 @@ const STEPS = [
   { key: "flag", label: "Flag", points: POINTS.flag }
 ];
 
+const TAP_CONFIRM_STAGES = new Set(["hemisphere", "continent", "country", "town"]);
+const TAP_CONFIRM_QUERY = window.matchMedia("(hover: none), (pointer: coarse), (max-width: 760px)");
+
 const DIFFICULTY_RANK = {
   easy: 1,
   medium: 2,
@@ -615,7 +618,8 @@ const state = {
   zoomTransform: d3.zoomIdentity,
   currentProjection: null,
   satelliteLayer: null,
-  targetCueTimer: null
+  targetCueTimer: null,
+  pendingChoice: null
 };
 
 const els = {
@@ -644,6 +648,7 @@ const els = {
   zoomResetButton: document.querySelector("#zoomResetButton"),
   zoomInButton: document.querySelector("#zoomInButton"),
   choicePanel: document.querySelector("#choicePanel"),
+  touchAnswerBar: document.querySelector("#touchAnswerBar"),
   menuMap: d3.select("#menuMap"),
   worldMap: d3.select("#worldMap")
 };
@@ -667,7 +672,116 @@ function shuffle(items) {
 }
 
 function setHover(text) {
-  els.hoverLabel.textContent = text || "Hover over a highlighted map choice.";
+  els.hoverLabel.textContent = text || (usesTapConfirm() ? "Tap a highlighted map choice." : "Hover over a highlighted map choice.");
+}
+
+function usesTapConfirm() {
+  return TAP_CONFIRM_QUERY.matches;
+}
+
+function isTapConfirmStage() {
+  return TAP_CONFIRM_STAGES.has(state.stage);
+}
+
+function clearTouchChoiceHighlight() {
+  mapLayer().selectAll(".is-touch-selected").classed("is-touch-selected", false);
+}
+
+function clearPendingChoice({ render = true } = {}) {
+  state.pendingChoice = null;
+  clearTouchChoiceHighlight();
+  if (render) renderTouchAnswerBar();
+}
+
+function resolveChoiceLabel(label, datum) {
+  const rawLabel = typeof label === "function" ? label(datum) : label;
+  return String(rawLabel || "this map choice")
+    .replace(/^Choose\s+(the\s+)?/i, "")
+    .trim();
+}
+
+function handleSvgChoice(event, datum, handler, label) {
+  if (!usesTapConfirm() || !isTapConfirmStage()) {
+    handler(datum);
+    return;
+  }
+
+  event.preventDefault();
+  clearTouchChoiceHighlight();
+  d3.select(event.currentTarget).classed("is-touch-selected", true);
+  state.pendingChoice = {
+    stage: state.stage,
+    datum,
+    handler,
+    label: resolveChoiceLabel(label, datum)
+  };
+  setHover(state.pendingChoice.label);
+  renderTouchAnswerBar();
+}
+
+function submitPendingChoice() {
+  const pending = state.pendingChoice;
+  if (!pending || pending.stage !== state.stage) return;
+  state.pendingChoice = null;
+  clearTouchChoiceHighlight();
+  pending.handler(pending.datum);
+}
+
+function touchFeedbackText() {
+  if (state.stage === "flag" && state.flagAnswered) {
+    const correct = state.roundResults.flag === true;
+    const selectedFlag = state.flagChoices.find((country) => country.iso2 === state.selectedFlagIso2);
+    return correct
+      ? `Correct flag. +${POINTS.flag}`
+      : `You chose ${selectedFlag?.name || "another flag"}. The flag was ${state.target.country.name}.`;
+  }
+
+  return state.feedback?.text || "";
+}
+
+function renderTouchAnswerBar() {
+  if (!els.touchAnswerBar) return;
+
+  const inGame = !els.gameScreen.classList.contains("hidden") && state.stage !== "summary";
+  const shouldShow = usesTapConfirm() && inGame && (isTapConfirmStage() || state.stage === "reveal" || (state.stage === "flag" && state.flagAnswered));
+
+  if (!shouldShow) {
+    els.touchAnswerBar.className = "touch-answer-bar hidden";
+    els.touchAnswerBar.innerHTML = "";
+    els.body.classList.remove("has-touch-answer-bar");
+    return;
+  }
+
+  const pending = state.pendingChoice?.stage === state.stage ? state.pendingChoice : null;
+  const feedbackText = touchFeedbackText();
+  const isFinalFeedback = state.stage === "reveal" || (state.stage === "flag" && state.flagAnswered);
+  const title = pending
+    ? "Selected"
+    : isFinalFeedback
+      ? (state.feedback?.title || (state.stage === "flag" ? "Flag result" : "Turn ended"))
+      : state.feedback?.type === "good"
+        ? "Correct"
+        : "Tap to choose";
+  const message = pending?.label || feedbackText || "Tap a map choice, then submit it.";
+  let feedbackClass = "";
+  if (state.stage === "flag" && state.flagAnswered) {
+    feedbackClass = state.roundResults.flag === true ? "is-good" : "is-bad";
+  } else if (state.feedback?.type === "good") {
+    feedbackClass = "is-good";
+  } else if (state.feedback?.type === "bad" || isFinalFeedback) {
+    feedbackClass = "is-bad";
+  }
+
+  els.touchAnswerBar.className = ["touch-answer-bar", feedbackClass].filter(Boolean).join(" ");
+  els.touchAnswerBar.innerHTML = `
+    <div class="touch-answer-copy">
+      <strong>${escapeHtml(title)}</strong>
+      <p>${escapeHtml(message)}</p>
+    </div>
+    ${pending ? '<button class="touch-submit-button" type="button" data-touch-submit aria-label="Submit selected answer">✓</button>' : ""}
+  `;
+  els.touchAnswerBar.querySelector("[data-touch-submit]")?.addEventListener("click", submitPendingChoice);
+  els.body.classList.add("has-touch-answer-bar");
 }
 
 function continentForCountry(country) {
@@ -946,6 +1060,7 @@ function startRound(index) {
   state.flagChoices = [];
   state.flagAnswered = false;
   state.selectedFlagIso2 = null;
+  clearPendingChoice({ render: false });
   renderStage();
   cueTargetName();
 }
@@ -977,10 +1092,12 @@ function restartToMenu() {
   state.revealBounds = null;
   state.townChoices = [];
   state.selectedContinent = null;
+  clearPendingChoice({ render: false });
   els.gameScreen.classList.add("hidden");
   els.menuScreen.classList.remove("hidden");
   state.selectedFlagIso2 = null;
   updateScore();
+  renderTouchAnswerBar();
 }
 
 function renderHud() {
@@ -1024,6 +1141,10 @@ function renderHud() {
 }
 
 function renderStage() {
+  if (state.pendingChoice && state.pendingChoice.stage !== state.stage) {
+    state.pendingChoice = null;
+  }
+
   renderHud();
   els.stageLabel.textContent = currentStepLabel();
   els.stagePrompt.textContent = currentPrompt();
@@ -1037,6 +1158,7 @@ function renderStage() {
   if (state.stage === "summary") drawSummaryStage();
 
   renderChoicePanel();
+  renderTouchAnswerBar();
 }
 
 function renderChoicePanel() {
@@ -1560,10 +1682,10 @@ function bindSvgChoice(selection, handler, label) {
     .on("keydown", (event, datum) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        handler(datum);
+        handleSvgChoice(event, datum, handler, label);
       }
     })
-    .on("click", (event, datum) => handler(datum));
+    .on("click", (event, datum) => handleSvgChoice(event, datum, handler, label));
 }
 
 function continentFromDatum(datum) {
@@ -2296,6 +2418,7 @@ function finishGame() {
   state.stage = "summary";
   state.target = null;
   state.roundScore = 0;
+  clearPendingChoice({ render: false });
   renderStage();
 }
 
@@ -2326,6 +2449,18 @@ function initControls() {
   els.zoomOutButton.addEventListener("click", () => zoomBy(0.72));
   els.zoomResetButton.addEventListener("click", resetZoom);
   els.zoomInButton.addEventListener("click", () => zoomBy(1.38));
+
+  const handleInputModeChange = () => {
+    if (!usesTapConfirm()) clearPendingChoice({ render: false });
+    setHover();
+    renderTouchAnswerBar();
+  };
+
+  if (TAP_CONFIRM_QUERY.addEventListener) {
+    TAP_CONFIRM_QUERY.addEventListener("change", handleInputModeChange);
+  } else {
+    TAP_CONFIRM_QUERY.addListener(handleInputModeChange);
+  }
 }
 
 function init() {
