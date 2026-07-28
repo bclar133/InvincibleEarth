@@ -1,7 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Bungee&family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap");
 
 :root {
   color-scheme: light;
+  --font-brand: "Bungee", "Bricolage Grotesque", "Trebuchet MS", ui-sans-serif, system-ui, sans-serif;
   --font-heading: "Bricolage Grotesque", "Trebuchet MS", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Nunito Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --bg: #f2efe5;
@@ -22,6 +23,11 @@
   --country-line: #5e746f;
   --grid: rgba(23, 126, 137, 0.2);
   --hover: rgba(23, 126, 137, 0.62);
+  --brand-a: #0e6f87;
+  --brand-b: #c76d2b;
+  --brand-c: #f1bd63;
+  --brand-plate: rgba(255, 250, 240, 0.72);
+  --brand-grid: rgba(23, 126, 137, 0.18);
 }
 
 body[data-theme="arcade"] {
@@ -44,6 +50,11 @@ body[data-theme="arcade"] {
   --country-line: #d9c9ff;
   --grid: rgba(56, 213, 200, 0.2);
   --hover: rgba(255, 184, 77, 0.68);
+  --brand-a: #38d5c8;
+  --brand-b: #ffb84d;
+  --brand-c: #d9c9ff;
+  --brand-plate: rgba(45, 41, 61, 0.82);
+  --brand-grid: rgba(56, 213, 200, 0.22);
 }
 
 body[data-theme="satellite"] {
@@ -66,6 +77,11 @@ body[data-theme="satellite"] {
   --country-line: #cfd8bd;
   --grid: rgba(118, 200, 147, 0.22);
   --hover: rgba(241, 189, 99, 0.7);
+  --brand-a: #8dd67e;
+  --brand-b: #f1bd63;
+  --brand-c: #f1f5e8;
+  --brand-plate: rgba(36, 49, 38, 0.86);
+  --brand-grid: rgba(141, 214, 126, 0.2);
 }
 
 * {
@@ -143,6 +159,69 @@ p {
   gap: 20px;
   align-items: end;
   margin-bottom: 18px;
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 13px 18px var(--shadow));
+}
+
+.brand-copy {
+  min-width: 0;
+}
+
+.site-title {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 0.22em;
+  align-items: baseline;
+  max-width: 100%;
+  padding: 0.05em 0.2em 0.1em;
+  font-family: var(--font-brand);
+  font-size: 3.35rem;
+  font-weight: 400;
+  line-height: 0.94;
+  color: var(--ink);
+  text-shadow: 0 3px 0 rgba(255, 250, 240, 0.78), 0 13px 28px var(--shadow);
+  isolation: isolate;
+}
+
+.site-title::before {
+  content: "";
+  position: absolute;
+  inset: 0.06em -0.03em 0;
+  z-index: -1;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, var(--brand-plate), rgba(255, 255, 255, 0.14)),
+    linear-gradient(90deg, transparent 0 18px, var(--brand-grid) 18px 19px, transparent 19px 36px),
+    linear-gradient(0deg, transparent 0 18px, var(--brand-grid) 18px 19px, transparent 19px 36px);
+  box-shadow: 0 14px 30px var(--shadow);
+  transform: rotate(-0.7deg);
+}
+
+.site-title span {
+  background: linear-gradient(135deg, var(--brand-a), var(--brand-c) 48%, var(--brand-b));
+  background-clip: text;
+  color: transparent;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.7px rgba(23, 33, 43, 0.34);
+}
+
+.site-title span:last-child {
+  background-image: linear-gradient(135deg, var(--brand-b), var(--brand-c) 45%, var(--brand-a));
 }
 
 .eyebrow {
@@ -1164,6 +1243,21 @@ body[data-theme="satellite"] .country-selected {
 
   h1 {
     font-size: 2.5rem;
+  }
+
+  .brand-lockup {
+    align-items: center;
+    gap: 10px;
+  }
+
+  .brand-mark {
+    width: 56px;
+    height: 56px;
+  }
+
+  .site-title {
+    font-size: 2.18rem;
+    padding: 0.06em 0.18em 0.11em;
   }
 
   .topbar,
