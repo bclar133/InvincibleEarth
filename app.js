@@ -43,6 +43,10 @@ const CONTINENTS = [
 const CONTINENT_BY_KEY = new Map(CONTINENTS.map((continent) => [continent.key, continent]));
 const TOWN_SPOT_LABELS = ["A", "B", "C", "D"];
 const EXCLUDED_COUNTRY_ISO3 = new Set(["BHR", "HKG", "SGP"]);
+// Main country answer shapes can exclude far-off overseas fragments while keeping nearby islands.
+const COUNTRY_MAIN_PART_BOUNDS = new Map([
+  ["FRA", [[-6, 41], [10, 52]]]
+]);
 
 const EASY_CITY_KEYS = new Set([
   "ARG:Buenos Aires",
@@ -523,7 +527,9 @@ const state = {
   countries: [],
   countryByMapId: new Map(),
   featureByMapId: new Map(),
+  displayFeatureByMapId: new Map(),
   geoFeatures: [],
+  displayGeoFeatures: [],
   targets: [],
   target: null,
   roundIndex: 0,
@@ -684,6 +690,58 @@ function keepCountriesWithMapFeatures() {
   rebuildCountryLookup();
 }
 
+function buildDisplayMapFeatures() {
+  state.displayGeoFeatures = state.geoFeatures.map((feature) => cleanedDisplayFeature(feature));
+  state.displayFeatureByMapId = new Map(state.displayGeoFeatures.map((feature) => [feature.id, feature]));
+}
+
+function cleanedDisplayFeature(feature) {
+  const country = state.countryByMapId.get(feature.id);
+  const mainBounds = COUNTRY_MAIN_PART_BOUNDS.get(country?.iso3);
+
+  if (!mainBounds || feature.geometry?.type !== "MultiPolygon") {
+    return feature;
+  }
+
+  const coordinates = feature.geometry.coordinates.filter((polygonCoordinates) => {
+    const polygon = polygonFeature(feature, polygonCoordinates);
+    return boundsIntersect(normalizeBounds(d3.geoBounds(polygon)), mainBounds);
+  });
+
+  if (!coordinates.length || coordinates.length === feature.geometry.coordinates.length) {
+    return feature;
+  }
+
+  return {
+    ...feature,
+    geometry: {
+      ...feature.geometry,
+      coordinates
+    }
+  };
+}
+
+function polygonFeature(feature, coordinates) {
+  return {
+    type: "Feature",
+    id: feature.id,
+    properties: feature.properties,
+    geometry: {
+      type: "Polygon",
+      coordinates
+    }
+  };
+}
+
+function displayFeatures() {
+  return state.displayGeoFeatures.length ? state.displayGeoFeatures : state.geoFeatures;
+}
+
+function displayFeatureForCountry(country) {
+  if (!country) return null;
+  return state.displayFeatureByMapId.get(country.mapId) || state.featureByMapId.get(country.mapId);
+}
+
 async function loadWorldMap() {
   try {
     const topology = await loadMapTopology();
@@ -691,6 +749,7 @@ async function loadWorldMap() {
     state.geoFeatures = featureCollection.features.filter((feature) => feature.id !== "010");
     state.featureByMapId = new Map(state.geoFeatures.map((feature) => [feature.id, feature]));
     keepCountriesWithMapFeatures();
+    buildDisplayMapFeatures();
     state.mapReady = true;
     drawMenuPreview();
     els.loadingNote.textContent = `${state.countries.length} countries and territories ready.`;
@@ -1409,7 +1468,7 @@ function drawMenuPreview() {
 
   layer.append("g")
     .selectAll("path")
-    .data(state.geoFeatures)
+    .data(displayFeatures())
     .join("path")
     .attr("class", "land country-muted")
     .attr("d", path);
@@ -1457,7 +1516,7 @@ function drawHemisphereStage() {
 
   mapLayer().append("g")
     .selectAll("path")
-    .data(state.geoFeatures)
+    .data(displayFeatures())
     .join("path")
     .attr("class", "land country-muted")
     .attr("d", path);
@@ -1491,7 +1550,7 @@ function drawContinentStage() {
 
   const countryPaths = mapLayer().append("g")
     .selectAll("path")
-    .data(state.geoFeatures)
+    .data(displayFeatures())
     .join("path")
     .attr("class", (feature) => state.countryByMapId.has(feature.id) ? "continent-choice" : "land country-muted")
     .attr("d", path)
@@ -1543,7 +1602,7 @@ function drawCountryStage() {
 
   const countryPaths = mapLayer().append("g")
     .selectAll("path")
-    .data(state.geoFeatures)
+    .data(displayFeatures())
     .join("path")
     .attr("class", (feature) => isCountrySelectable(state.countryByMapId.get(feature.id)) ? "country-base" : "land country-muted")
     .attr("d", path)
@@ -1565,7 +1624,7 @@ function drawCountryStage() {
 }
 
 function shouldShowCountryMarker(country, projection, path) {
-  const feature = state.featureByMapId.get(country.mapId);
+  const feature = displayFeatureForCountry(country);
   if (!feature) return true;
   const bounds = path.bounds(feature);
   const width = bounds[1][0] - bounds[0][0];
@@ -1617,7 +1676,7 @@ function drawTownStage() {
 
 function drawLocalMapContext(path, bounds) {
   const contextBounds = expandBounds(bounds, 1.2, 1);
-  const contextFeatures = state.geoFeatures.filter((feature) => boundsIntersect(d3.geoBounds(feature), contextBounds));
+  const contextFeatures = displayFeatures().filter((feature) => boundsIntersect(d3.geoBounds(feature), contextBounds));
 
   mapLayer().append("g")
     .selectAll("path")
@@ -1629,7 +1688,7 @@ function drawLocalMapContext(path, bounds) {
 
 function drawLocalCountryBackdrop(path, bounds = getPlayableBounds(state.target.country)) {
   const country = state.target.country;
-  const feature = state.featureByMapId.get(country.mapId);
+  const feature = displayFeatureForCountry(country);
   if (feature) {
     mapLayer().append("path")
       .datum(feature)
@@ -1670,7 +1729,7 @@ function drawSummaryStage() {
 
   mapLayer().append("g")
     .selectAll("path")
-    .data(state.geoFeatures)
+    .data(displayFeatures())
     .join("path")
     .attr("class", "land country-muted")
     .attr("d", path);
@@ -1733,7 +1792,7 @@ function localProjection(bounds) {
 }
 
 function getPlayableBounds(country) {
-  const feature = state.featureByMapId.get(country.mapId);
+  const feature = displayFeatureForCountry(country);
   let bounds = null;
 
   if (feature) {
@@ -1932,7 +1991,7 @@ function generatedTownCandidates(bounds) {
     lng: west + (east - west) * x,
     lat: south + (north - south) * y
   })));
-  const feature = state.featureByMapId.get(state.target.country.mapId);
+  const feature = displayFeatureForCountry(state.target.country);
   const countryCandidates = feature
     ? candidates.filter((candidate) => d3.geoContains(feature, [candidate.lng, candidate.lat]))
     : candidates;
